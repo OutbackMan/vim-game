@@ -1,14 +1,14 @@
 " use ch_open("server:port")
 " apply colouring to line ranges
 
-function! ViewportIsNotLargeEnough(desired_width, desired_height)
-  if &lines < a:desired_height
+function! ViewportIsNotLargeEnough(desired_field_width, desired_field_height)
+  if &lines < a:desired_field_height
     echoerr '[TFPS] Current maximum viewport height of ' . &lines . 
-	  \' is less than required minimum viewport height of ' . a:desired_height
+	  \' is less than required minimum viewport height of ' . a:desired_field_height
 	return 1
-  elseif &columns < a:desired_width
+  elseif &columns < a:desired_field_width
     echoerr '[TFPS] Current maximum viewport width of ' . &columns . 
-	  \' is less than required minimum viewport width of ' . a:desired_width
+	  \' is less than required minimum viewport width of ' . a:desired_field_width
 	return 1
   else
     return 0
