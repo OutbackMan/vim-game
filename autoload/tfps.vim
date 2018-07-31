@@ -3,13 +3,15 @@
 " highlight FleetingFlashyFiretrucks ctermfg=red
 " match FleetingFlashyFiretrucks /\%>2l\%<6l/
 
-function! EnsureViewportIsLargeEnough(desired_width, desired_height)
+function! ViewportIsNotLargeEnough(desired_width, desired_height)
   if &lines < a:desired_height
     echoerr '[TFPS] Current maximum viewport height of ' . &lines . ' is less than required minimum viewport height of ' . a:desired_height
+	return 1
   elseif &columns < a:desired_width
     echoerr '[TFPS] Current maximum viewport width of ' . &columns . ' is less than required minimum viewport width of ' . a:desired_width
+	return 1
   else
-    return
+    return 0
   endif
 endfunction
 
@@ -64,7 +66,9 @@ function! tfps#TFPS()
   let viewport_width = 120
   let viewport_height = 40
 
-  call EnsureViewportIsLargeEnough(viewport_width, viewport_height)
+  if ViewportIsNotLargeEnough(viewport_width, viewport_height)
+    return
+  endif
 
   tabnew TFPS 
 
