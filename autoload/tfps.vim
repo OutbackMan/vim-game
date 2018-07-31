@@ -1,7 +1,5 @@
 " use ch_open("server:port")
 " apply colouring to line ranges
-" highlight FleetingFlashyFiretrucks ctermfg=red
-" match FleetingFlashyFiretrucks /\%>2l\%<6l/
 
 function! ViewportIsNotLargeEnough(desired_width, desired_height)
   if &lines < a:desired_height
@@ -60,101 +58,66 @@ function! CreateMap()
   \}
 endfunction
 
-function! RegisterInputMappings()
-  noremap <silent> <buffer> a :call RotateLeft()<CR>
-  noremap <silent> <buffer> d :call RotateRight()<CR>
-endfunction
+function! CreateRenderer(field_width, field_height, default_char, default_bg_colour, default_fg_color)
+  execute 'highlight DefaultCh ctermfg=' . a:default_fg_color . 
+    \' guifg=' . a:default_fg_color . ' ctermbg=' . a:default_bg_color .
+	\' guibg='. a:default_bg_color
 
-function! RotateLeft()
-  let a:player.view_angle = a:player.view_angle - 0.1
-endfunction
+  match DefaultCh /.*/
 
-function! RotateRight()
-  let a:player.view_angle = a:player.view_angle + 0.1
-endfunction
-
-function! Loop(viewport_width, viewport_height, map, player)
-  let col = 0
-  while col < a:viewport_width
-	let ray_angle = (a:player.view_angle - (a:player.fov / 2.0)) + ((col / a:viewport_width) * a:player.fov)
-
-    let distance_to_wall = 0 
-	let have_not_hit_wall = 1
-
-	let ray_x = sin(ray_angle)
-	let ray_y = cos(ray_angle)
-
-    while have_not_hit_wall && distance_to_wall < a:player.depth
-      let distance_to_wall = distance_to_wall + 0.1
-	  
-	  let ray_segment_x = a:player.x + ray_x * distance_to_wall
-	  let ray_segment_y = a:player.y + ray_y * distance_to_wall
-
-      if ray_segment_x < 0 || ray_segment_x >= a:viewport_width || ray_segment_y < 0 || ray_segment_y >= a:viewport_height
-        let have_not_hit_wall = 0
-		let distance_to_wall = a:player.depth
-	  else
-	    if a:map[ray_segment_x * a:map.width + ray_segment_y] == '#'
-          let have_not_hit_wall = 0
-		endif
-	  endif
-    endwhile
-
-    let ceiling = a:viewport_height / 2.0 - a:viewport_height / distance_to_wall
-	let floor = a:viewport_height - ceiling
-
-    let row = 0
-	while row < a:viewport_height
-      if row < ceiling
-	    screen[row * a:viewport_width + col] = ' '; 
-	  elseif row > ceiling && row <= floor
-	    screen[row * a:viewport_width + col] = '#'; 
-	  else
-	    screen[row * a:viewport_width + col] = '.'; 
-	  endif
-    let row = row + 1
-	endwhile
-    
-    let col = col + 1
-  endwhile
-  " call setline(line('$'), '' . g:counter . ' ' . a:player.start_x)
-endfunction
-
-function! CreateRenderer(field_width, field_height)
   let renderer = { 
-    \'buffer': repeat([" "], &columns * &lines),
+    \'buf': repeat([a:bg_char], &columns * &lines),
 	\'field_width': a:field_width,
-	\'field_height': a:field_height
+	\'field_height': a:field_height,
+	\'x_offset': &columns - a:field_width / 2,
+	\'y_offset': &lines - a:field_height / 2
   \}
 
-  function! renderer.set(x, y, ch)
-    let x_offset = &columns - self.field_width / 2
-    let y_offset = &rows - self.field_height / 2
-    if a:x + x_offset < 0 || a:x + x_offset >= self.field_width || a:y + y_offset .....
-		echoerr "invalid coordinate"
+  function! renderer.set_buf(x, y, ch)
+    if a:x < 0 || a:x >= self.field_width || a:y < 0 || a:y >= self.field_height
+		echoerr 'Invalid renderer buffer coordinate: (' . a:x . ', ' . a:y . ')'
 	else
-      self.buffer[(a:y + y_offset) * &columns + a:x + x_offset] = a:ch
+      self.buf[(a:y + self.y_offset) * &columns + (a:x + self.x_offset)] = a:ch
 	endif
   endfunction
 
   function! renderer.render()
-    let line_num = 0 
-	while line_num < &lines
-	  let start_index = line_num * &lines 
-	  let end_index = start_index + &columns
-	  setline(line(line_num), join(self.buffer[start_index:end_index], ''))
-      let line_num = line_num + 1
+    let cur_line_num = 0 
+	while cur_line_num < &lines
+	  let start_buf_index = cur_line_num * &lines 
+	  let end_buf_index = start_buf_index + &columns
+	  setline(line(cur_line_num), join(self.buf[start_buf_index:end_buf_index], ''))
+      let cur_line_num = cur_line_num + 1
 	endwhile
   endfunction
 
   return renderer
 endfunction
 
-function! tfps#TFPS()
-  let output_width = 120
-  let output_height = 40
+function! RegisterInputMappings(player)
+  noremap <silent> <buffer> <LeftMouse> :echo 'clicked'<CR> " then read cursor position
+  noremap <silent> <buffer> a :call RotateLeft(a:player)<CR>
+  noremap <silent> <buffer> d :call RotateRight(a:player)<CR>
+endfunction
 
-  if ViewportIsNotLargeEnough(output_width, output_height)
+function! RotateLeft(player)
+  let a:player.view_angle = a:player.view_angle - 0.1
+endfunction
+
+function! RotateRight(player)
+  let a:player.view_angle = a:player.view_angle + 0.1
+endfunction
+
+function! Loop(renderer, map, player)
+ call a:renderer.render()
+endfunction
+
+
+function! tfps#TFPS()
+  let field_width = 120
+  let field_height = 40
+
+  if ViewportIsNotLargeEnough(field_width, field_height)
     return
   endif
 
@@ -162,13 +125,13 @@ function! tfps#TFPS()
 
   call SetRequiredVimOptions()
 
-  let renderer = CreateRenderer(output_width, output_height)
-  let player = CreatePlayer(8.0, 8.0, 0, 3.141 / 4.0)
+  let renderer = CreateRenderer(field_width, field_height)
   let map = CreateMap()
+  let player = CreatePlayer(8.0, 8.0, 0, 3.141 / 4.0)
 
-  call RegisterInputMappings()
+  call RegisterInputMappings(player)
 
-  let TFPSLoop = {-> Loop(viewport_width, viewport_height, map, player)}
+  let TFPSLoop = {-> Loop(renderer, map, player)}
   let g:tfps_loop_id = timer_start(0, TFPSLoop, {'repeat': -1})
 
   augroup EventListeners
