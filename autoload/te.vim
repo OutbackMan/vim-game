@@ -10,6 +10,7 @@ function! te#CreateField(name, desired_num_ch_x, desired_num_ch_y)
   setlocal signcolumn=no
   setlocal buftype=nofile
   setlocal nocursorcolumn
+  setlocal cc=0
   setlocal nocursorline
   setlocal noerrorbells
   setlocal novisualbell
@@ -21,7 +22,7 @@ function! te#CreateField(name, desired_num_ch_x, desired_num_ch_y)
   setlocal cmdheight=1
 
   let num_visible_ch_x = &columns
-  let num_visible_ch_y = &lines - 1
+  let num_visible_ch_y = &lines - &cmdheight
   
   if num_visible_ch_x < a:desired_num_ch_x
     echomsg '[TE - Error] The maximum number of characters that can be ' .
@@ -103,21 +104,21 @@ function! te#CreateRenderer(field)
     let cur_ch_x_pos = a:x
     for ch in split(a:str, '\zs')
       call self.set_ch(cur_ch_x_pos, a:y, ch, a:bg_fg_weight_group)
-	  let cur_ch_x_pos = cur_ch_x_pos + 1
+	  let cur_ch_x_pos += 1
     endfor
   endfunction
 
   function! renderer.render()
     let cur_line_num = 0 
 	let cur_start_buf_index = 0
-	while cur_line_num < &lines
-	  let cur_end_buf_index = cur_start_buf_index + &columns - 1
+	while cur_line_num < self._field._num_visible_ch_y
+	  let cur_end_buf_index = cur_start_buf_index + self._field._num_visible_ch_x - 1
 	  call setline(
 	         \cur_line_num + 1, 
 	         \join(self._output_buf[cur_start_buf_index:cur_end_buf_index], '')
 	       \)
-      let cur_line_num = cur_line_num + 1
-	  let cur_start_buf_index = cur_end_buf_index
+      let cur_line_num += 1
+	  let cur_start_buf_index = cur_end_buf_index + 1
 	endwhile
   endfunction
 
