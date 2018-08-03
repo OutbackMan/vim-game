@@ -1,26 +1,39 @@
 function! te#CreateField(name, desired_num_ch_x, desired_num_ch_y)
+  if filereadable(bufname('%'))
+    write
+  endif
+
   execute 'edit ' . a:name
   
-  let cur_line_num = 0
-  while cur_line_num < &lines
-    call append(cur_line_num, ' ')
-    let cur_line_num += 1 
-  endwhile
-  let num_visible_ch_y = line("w$") - line("w0")
-  let num_visible_ch_x = &columns
-  1,%delete
+  setlocal nonumber
+  setlocal foldmethod=manual
+  setlocal signcolumn=no
+  setlocal buftype=nofile
+  setlocal nocursorcolumn
+  setlocal nocursorline
+  setlocal noerrorbells
+  setlocal novisualbell
+  setlocal noshowmode
+  setlocal noruler
+  setlocal laststatus=0
+  setlocal noshowcmd
+  setlocal mouse=a
+  setlocal cmdheight=1
 
+  let num_visible_ch_x = &columns
+  let num_visible_ch_y = &lines - 1
+  
   if num_visible_ch_x < a:desired_num_ch_x
     echomsg '[TE - Error] The maximum number of characters that can be ' .
 	  \'currently displayed on a given row: ' . num_visible_ch_x . 
 	  \' is less than the desired number: ' . a:desired_num_ch_x
-    quit!
+    bdelete 
 	return v:none
   elseif num_visible_ch_y < a:desired_num_ch_y
     echomsg '[TE - Error] The maximum number of characters that can be ' .
 	  \'currently displayed on a given column: ' . num_visible_ch_y . 
 	  \' is less than the desired number: ' . a:desired_num_ch_y
-    quit!
+    bdelete 
 	return v:none
   else
 
@@ -36,14 +49,6 @@ function! te#CreateField(name, desired_num_ch_x, desired_num_ch_y)
 endfunction
 
 function! te#CreateRenderer(field)
-  setlocal buftype=nofile
-  setlocal nocursorcolumn
-  setlocal nocursorline
-  setlocal noerrorbells
-  setlocal novisualbell
-  setlocal mouse=a
-  setlocal nonumber
-
   let renderer = { 
 	\'_field': a:field,
     \'_output_buf': repeat([' '], a:field._num_visible_ch_x * a:field._num_visible_ch_y),
@@ -84,13 +89,13 @@ function! te#CreateRenderer(field)
 	    call add(self._format._bg_fg_weight_groups, a:bg_fg_weight_group)
       endif
 
-      let match_id = matchaddpos(a:bg_fg_weight_group, [buf_y + 1, buf_x + 1])
+      let match_id = matchaddpos(a:bg_fg_weight_group, [[buf_y + 1, buf_x + 1]])
       let self._format._matches[match_pattern] = {
 	    \'_id': match_id,
 	    \'_bg_fg_weight_group': a:bg_fg_weight_group
       \}
 
-      let self._output_buf[buf_y * &columns + buf_x] = a:ch
+      let self._output_buf[buf_y * self._field._num_visible_ch_x + buf_x] = a:ch
 	endif
   endfunction
 
