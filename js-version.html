@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="flappy bird" />
+  <title>flappy bird</title>
+<style>
+body {
+ margin: 0;
+ padding: 0;
+ overflow: hidden;
+}
+canvas {
+  border: 1px solid black;
+}
+</style>
+</head>
+
+<body>
+  <canvas class="FlappyBird"></canvas>
+</body>
+<script>
+class TextRenderer {
+  constructor(canvas_dom_elem, logical_width, logical_height) {
+    this._canvas = canvas_dom_elem;
+
+    this._renderer = this._canvas.getContext("2d");
+    this._renderer.font = "normal 12px monospace";
+    this._renderer.textBaseline = "top";
+    this._renderer.textAlign = "start";
+
+    this._logical_width = logical_width;
+    this._logical_height = logical_height;
+
+    this.scale_to_current_window_dimensions();
+  }
+
+  scale_to_current_window_dimensions() {
+    if (window.innerWidth < this._logical_width) {
+      this._canvas.width = this._logical_width; 
+    } else {
+      this._canvas.width = window.innerWidth;
+    }
+    if (window.innerHeight < this._logical_height) {
+      this._canvas.height = this._logical_height;
+    } else {
+      this._canvas.height = window.innerHeight;
+    }
+
+    this._renderer.font = "normal 12px monospace";
+    this._renderer.textBaseline = "top";
+    this._renderer.textAlign = "start";
+    
+    this._cur_font_width = parseFloat(this._renderer.measureText("W").width);
+    this._cur_font_height = parseFloat(this._get_ch_height());
+
+    const NUM_CH_COULD_BE_DISPLAYED_X = parseInt(this._canvas.width / this._cur_font_width, 10);
+    const NUM_CH_COULD_BE_DISPLAYED_Y = parseInt(this._canvas.height / this._cur_font_height, 10);
+
+    this._x_scale = NUM_CH_COULD_BE_DISPLAYED_X / this._logical_width;
+    this._y_scale = NUM_CH_COULD_BE_DISPLAYED_Y / this._logical_height;
+
+    this._renderer.scale(this._x_scale, this._y_scale);
+  }
+
+  render_text(x, y, text, fill_style) {
+    let [physical_x, physical_y] = this._get_physical_from_logical_coordinates(x, y); 
+    if (x + text.length > this._logical_width) {
+      console.error(`Text string too long`); 
+      debugger;
+    }
+    this._renderer.fillStyle = fill_style;
+    this._renderer.fillText(text, physical_x, physical_y);
+  }
+
+  clear() {
+    this._renderer.clearRect(0, 0, this._canvas.width, this._canvas.height); 
+  }
+
+  _get_ch_height() {
+    let text_elem = document.createElement('div');
+    let text = document.createTextNode('M');
+    text_elem.appendChild(text);
+    text_elem.setAttribute('style', 'font:normal 12px monospace;position:absolute;top:0;left:0');
+    document.body.appendChild(text_elem);
+    let result = text_elem.offsetHeight;
+    document.body.removeChild(text_elem);
+    return result;
+  }
+
+  _get_physical_from_logical_coordinates(x, y) {
+    if (x < 0 || x >= this._logical_width || y < 0 || y >= this._logical_height) {
+      console.error(`Invalid renderer coordinates (${x}, ${y})`); 
+      debugger;
+    } else {
+      return [
+        parseInt(x * this._cur_font_width, 10),
+        parseInt(y * this._cur_font_height, 10)
+      ];
+    }
+  }
+}
+
+let flappy_bird = new TextRenderer(document.querySelector(".FlappyBird"), 200, 80);
+
+window.addEventListener("resize", (e) => {
+  flappy_bird.scale_to_current_window_dimensions();
+});
+window.addEventListener("orientationchange", (e) => {
+  flappy_bird.scale_to_current_window_dimensions();
+});
+
+window.requestAnimationFrame(flappy_bird_loop);
+
+function flappy_bird_loop(start_time) {
+  if (typeof flappy_bird_loop.when_last_iteration === "undefined") {
+    flappy_bird_loop.when_last_iteration = start_time;
+  }
+
+  let iteration_delta= start_time - flappy_bird_loop.when_last_iteration;
+  flappy_bird_loop.when_last_iteration = start_time;
+
+  flappy_bird.clear();
+
+  flappy_bird.render_text(0, 0, "#", "red");
+  flappy_bird.render_text(1, 1, "#################################################", "red");
+  flappy_bird.render_text(0, 49, "##################################################", "red");
+
+  window.requestAnimationFrame(flappy_bird_loop);
+}
+</script>
+
+</html>
